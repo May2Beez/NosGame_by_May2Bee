@@ -129,7 +129,7 @@ class PondGame:
         win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYDOWN, key, 0x002C0001)
         win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYUP, key, 0xC02C0001)
         if delay:
-            time.sleep(0.75)
+            time.sleep(0.60)
 
     # Checks if bat is over bob
     def check_bat_over_bob(self, img, the_way, key):
@@ -409,5 +409,7 @@ class PondGame:
             if arrow_down.find(crop_img, threshold=0.98):
                 self.click(win32con.VK_DOWN, False)
                 combo += 1
+
+            time.sleep(0.03)
 
         time.sleep(0.2)
