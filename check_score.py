@@ -43,4 +43,7 @@ class CheckScore:
             if thresh.shape[1] < 22:
                 break
 
-        return int(score)
+        if len(score) > 0:
+            return int(score)
+        else:
+            return 0
