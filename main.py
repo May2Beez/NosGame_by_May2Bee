@@ -5,6 +5,8 @@ import pond_game
 import sawmill_game
 
 
+# Simple GUI
+
 def gui():
     os.system('cls')
     print("Welcome to NosGame, minigames bot made by May2Bee!")
@@ -15,6 +17,8 @@ def gui():
     print("4. Firing Range (That will be hard)")
     print("0. Exit")
 
+
+# Choosing level to play
 
 def choose_level(option, repeats):
     window_name = 'Nostale'
@@ -49,6 +53,8 @@ def choose_level(option, repeats):
         choose_level(option, repeats)
 
 
+# Choosing repeats number
+
 def repeats_number(option):
     os.system('cls')
     print("How many times do you want to repeat?")
@@ -61,6 +67,8 @@ def repeats_number(option):
     else:
         print("Put only integer value from 1-20")
 
+
+# Choosing minigame
 
 def choose_option():
     option = input("Your option: ")
