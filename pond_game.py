@@ -93,7 +93,6 @@ class PondGame:
     def find_bobs(self):
         self.left_bot_bob = vision.Vision(cv2.imread(resource_path("images/bob_left_bot.png")))
         self.right_top_bob = vision.Vision(cv2.imread(resource_path("images/bob_top_right.png")))
-        self.result_window = vision.Vision(cv2.imread(resource_path("images/result_window.png")))
 
         if self.left_bot_bob and self.right_top_bob:
             time.sleep(0.1)
