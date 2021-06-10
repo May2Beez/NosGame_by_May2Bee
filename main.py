@@ -3,19 +3,19 @@ import time
 
 import pond_game
 import sawmill_game
+from ConsoleColors import *
 
 
 # Simple GUI
-
 def gui():
     os.system('cls')
-    print("Welcome to NosGame, minigames bot made by May2Bee!")
-    print("Choose your minigame by typing the number")
-    print("1. Fishpond")
-    print("2. Sawmill")
-    print("3. Quarry (Not yet)")
-    print("4. Firing Range (That will be hard)")
-    print("0. Exit")
+    print(Colors.BOLD + Colors.HEADER + "Welcome to NosGame, minigames bot made by May2Bee!")
+    print(Colors.OKCYAN + "Choose your minigame by typing the number" + Colors.ENDC)
+    print(Colors.OKCYAN + "1. Fishpond")
+    print("2. Sawmill" + Colors.ENDC)
+    print(Colors.FAIL + "3. Quarry (Not yet)")
+    print("4. Firing Range (That will be hard)" + Colors.ENDC)
+    print(Colors.BOLD + "0. Exit" + Colors.ENDC)
 
 
 # Choosing level to play
@@ -31,23 +31,30 @@ def choose_level(option, repeats):
         os.system('cls')
         print("BOT LOGS")
 
-        if option == '1':
-            print("[" + str(window_name) + "] Started bot at " + str(time.strftime("%H:%M:%S", time.localtime())) + " - " +
-                  str(repeats) + " times - " + str(level) + " level")
-            pond_game.PondGame(window_name, int(repeats), level)
-            print("[" + str(window_name) + "] Finished at " + str(time.strftime("%H:%M:%S", time.localtime())) + " - " +
-                  str(repeats) + " times - " + str(level) + " level")
-        elif option == '2':
-            print("[" + str(window_name) + "] Started bot at " + str(
+        if option in ('1', '2'):
+            print(Colors.OKGREEN + "[" + str(window_name) + "] Started bot at " + str(
                 time.strftime("%H:%M:%S", time.localtime())) + " - " +
                   str(repeats) + " times - " + str(level) + " level")
-            sawmill_game.Sawmill(window_name, int(repeats), level)
-            print("[" + str(window_name) + "] Finished at " + str(time.strftime("%H:%M:%S", time.localtime())) + " - " +
-                  str(repeats) + " times - " + str(level) + " level")
-        elif option == '3':
-            pass
-        elif option == '4':
-            pass
+
+            if option == '1':
+
+                pond_game.PondGame(window_name, int(repeats), level)
+
+            elif option == '2':
+
+                sawmill_game.Sawmill(window_name, int(repeats), level)
+
+            elif option == '3':
+
+                pass
+
+            elif option == '4':
+
+                pass
+
+            print(Colors.OKBLUE + "[" + str(window_name) + "] Finished at " + str(
+                time.strftime("%H:%M:%S", time.localtime())) + " - " +
+                  str(repeats) + " times - " + str(level) + " level" + Colors.ENDC)
 
     else:
         choose_level(option, repeats)
@@ -71,7 +78,7 @@ def repeats_number(option):
 # Choosing minigame
 
 def choose_option():
-    option = input("Your option: ")
+    option = input(Colors.HEADER + "Your option: ")
 
     if option == '1':
         repeats_number(option)

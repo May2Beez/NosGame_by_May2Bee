@@ -1,5 +1,3 @@
-import os
-import sys
 import time
 import cv2
 from threading import Thread
@@ -11,17 +9,8 @@ import win32gui
 import check_score
 import vision
 import WindowCapture
-
-
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
+from ConsoleColors import Colors
+from static_data import *
 
 
 class Sawmill:
@@ -41,6 +30,7 @@ class Sawmill:
         self.window_rect = win32gui.GetWindowRect(self.NosTale_hwnd)
         self.window_h = self.window_rect[3] - self.window_rect[1]
         self.window_w = self.window_rect[2] - self.window_rect[0]
+        self.wood_rgb = [(17, 49, 69), ]
         self.if_sawmill_start_exists()
 
     def checking_score_thread(self):
@@ -68,17 +58,15 @@ class Sawmill:
     def if_sawmill_start_exists(self):
         start = time.time()
         while not self.playing:
-            print("[" + str(self.NosTale_name) + "] Searching for start button...")
+            print(Colors.OKCYAN + "[" + str(self.NosTale_name) + "] Searching for start button...")
             img = WindowCapture.WindowCapture(window_hwnd=self.NosTale_hwnd).get_screenshot()
             points = self.start_sawmill.find(img, threshold=0.9)
             if time.time() - start > 5:
-                print("[" + str(self.NosTale_name) + "] I coudn't find start within 5 seconds")
+                print(Colors.WARNING + "[" + str(self.NosTale_name) + "] I coudn't find start within 5 seconds")
                 break
             if points:
-                print("[" + str(self.NosTale_name) + "] Found start button")
-                print("[" + str(self.NosTale_name) + "] Doing " + str(self.repeats_counter) + "/" + str(
-                        self.repeats) + " repeat")
-
+                print(Colors.BOLD + Colors.OKGREEN + "[" + str(
+                    self.NosTale_name) + "] Found start button" + Colors.ENDC + Colors.OKGREEN)
                 self.playing = True
                 self.click_sawmill_start(points)
 
@@ -89,6 +77,9 @@ class Sawmill:
         win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYUP, key, 0xC02C0001)
 
     def click_sawmill_start(self, points):
+        print(Colors.OKGREEN +
+              "[" + str(self.NosTale_name) + "] Doing " + str(self.repeats_counter) + "/" + str(
+            self.repeats) + " repeat")
         lParam = win32api.MAKELONG(points[0][0], points[0][1] + 20)
         win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
         win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
@@ -114,10 +105,6 @@ class Sawmill:
         self.start_game()
 
     def start_game(self):
-
-        wood = vision.Vision(cv2.imread(resource_path("images/wood.png")))
-        result_window = vision.Vision(cv2.imread(resource_path("images/result_window.png")))
-
         self.score = Thread(target=self.checking_score_thread, args=())
         self.score.start()
 
@@ -130,25 +117,22 @@ class Sawmill:
                 continue
 
             # Top chop place
-            chop_place_1_y = self.chop_places_points[0][1] - 80
-            chop_place_1_x = self.chop_places_points[0][0] - 20
-            chop_place_1 = img[int(chop_place_1_y):int(chop_place_1_y + 90),
-                           int(chop_place_1_x):int(chop_place_1_x + 45)].copy()
+            chop_place_1_y = self.chop_places_points[0][1] - 60
+            chop_place_1_x = self.chop_places_points[0][0] - 5
+            chop_place_1 = img[int(chop_place_1_y):int(chop_place_1_y + 60),
+                           int(chop_place_1_x):int(chop_place_1_x + 10)].copy()
 
             # Bottom chop place
-            chop_place_2_y = self.chop_places_points[1][1] - 80
-            chop_place_2_x = self.chop_places_points[1][0] - 20
-            chop_place_2 = img[int(chop_place_2_y):int(chop_place_2_y + 90),
-                           int(chop_place_2_x):int(chop_place_2_x + 45)].copy()
+            chop_place_2_y = self.chop_places_points[1][1] - 60
+            chop_place_2_x = self.chop_places_points[1][0] - 5
+            chop_place_2 = img[int(chop_place_2_y):int(chop_place_2_y + 60),
+                           int(chop_place_2_x):int(chop_place_2_x + 10)].copy()
 
-            chop_place_1_points = wood.find(chop_place_1, threshold=0.95)
-            chop_place_2_points = wood.find(chop_place_2, threshold=0.95)
-
-            if chop_place_1_points:
+            if detect_color(self.wood_rgb, chop_place_1):
 
                 self.click(win32con.VK_LEFT)
 
-            elif chop_place_2_points:
+            elif detect_color(self.wood_rgb, chop_place_2):
 
                 self.click(win32con.VK_RIGHT)
 
@@ -159,12 +143,12 @@ class Sawmill:
                 continue
 
             # IMG for result window
-            result_window_x = fail_img.shape[1] / 2 - 400 / 2
-            result_window_y = fail_img.shape[0] / 2 - 200 / 2
-            result_window_crop_img = fail_img[int(result_window_y):int(result_window_y + 200),
-                                     int(result_window_x):int(result_window_x + 400)].copy()
+            result_window_x = fail_img.shape[1] / 2 - 5
+            result_window_y = fail_img.shape[0] / 2 - 60
+            result_window_crop_img = fail_img[int(result_window_y):int(result_window_y + 10),
+                                     int(result_window_x):int(result_window_x + 10)].copy()
 
-            if result_window.find(result_window_crop_img, threshold=0.90):
+            if detect_color(StaticData.result_window_rgb, result_window_crop_img):
                 self.failed = True
                 self.playing = False
                 break
@@ -173,7 +157,6 @@ class Sawmill:
             self.stop_game()
 
     def stop_game(self):
-        get_reward = vision.Vision(cv2.imread(resource_path("images/get_reward.png")))
 
         if not self.failed:
 
@@ -184,54 +167,46 @@ class Sawmill:
                 except Exception:
                     continue
 
-                reward_points = get_reward.find(img, threshold=0.95)
+                # IMG for result window
+                result_window_x = img.shape[1] / 2 - 5
+                result_window_y = img.shape[0] / 2 - 60
+                result_window_crop_img = img[int(result_window_y):int(result_window_y + 10),
+                                         int(result_window_x):int(result_window_x + 10)].copy()
 
-                if reward_points:
+                if detect_color(StaticData.result_window_rgb, result_window_crop_img):
                     break
 
                 time.sleep(0.1)
 
             # Click Reward button
-            lParam = win32api.MAKELONG(reward_points[0][0], reward_points[0][1] + 20)
+            lParam = win32api.MAKELONG(StaticData.get_reward_position[0], StaticData.get_reward_position[1])
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-            time.sleep(0.7)
+            time.sleep(1)
 
             # Click level reward
-            reward_button_y = int(img.shape[0] / 2 + 50)
-            reward_button_x = int((img.shape[1] / 2 + (int(self.reward_level) - 3) * 70) if int(self.reward_level) >= 3 else (
-                    img.shape[0] / 2 - (int(self.reward_level) - 3) * 70))
+            reward_button_x, reward_button_y = StaticData.reward_positions[int(self.reward_level)]
 
             lParam = win32api.MAKELONG(reward_button_x, reward_button_y)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-            time.sleep(0.6)
+            time.sleep(1)
 
             self.repeats_counter += 1
 
-            finish_img = self.NosTale_window.get_screenshot()
-
             if self.repeats_counter <= self.repeats:
 
-                options_to_choose = vision.Vision(cv2.imread(resource_path("images/try_again.png")))
+                chosen_options_x, chosen_options_y = StaticData.try_again_position
 
             else:
 
-                options_to_choose = vision.Vision(cv2.imread(resource_path("images/end_session.png")))
-                print("[" + str(self.NosTale_name) + "] Has finished all repeats")
+                chosen_options_x, chosen_options_y = StaticData.stop_position
+                print(Colors.UNDERLINE + Colors.OKBLUE + "[" + str(
+                    self.NosTale_name) + "] Has finished all repeats" + Colors.OKGREEN)
 
-            while True:
-
-                chosen_option_points = options_to_choose.find(finish_img, threshold=0.85)
-
-                if chosen_option_points:
-                    break
-
-            time.sleep(0.1)
-
-            lParam = win32api.MAKELONG(chosen_option_points[0][0], chosen_option_points[0][1] + 20)
+            lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
@@ -248,22 +223,14 @@ class Sawmill:
             if vision.Vision(cv2.imread(resource_path("images/not_enough_points.png"))).find(result_window_crop_img,
                                                                                              threshold=0.9):
 
-                print("[" + str(self.NosTale_name) + "] Not enough points to play")
+                print(Colors.WARNING + "[" + str(self.NosTale_name) + "] Not enough points to play" + Colors.OKGREEN)
 
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYDOWN, win32con.VK_ESCAPE, 0x002C0001)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYUP, win32con.VK_ESCAPE, 0xC02C0001)
 
-                time.sleep(0.1)
+                chosen_options_x, chosen_options_y = StaticData.stop_position
 
-                end_img = self.NosTale_window.get_screenshot()
-
-                options_to_choose = vision.Vision(cv2.imread(resource_path("images/end_session.png")))
-
-                chosen_option_points = options_to_choose.find(end_img, threshold=0.92)
-
-                time.sleep(0.1)
-
-                lParam = win32api.MAKELONG(chosen_option_points[0][0], chosen_option_points[0][1] + 20)
+                lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
@@ -274,18 +241,16 @@ class Sawmill:
                 self.if_sawmill_start_exists()
 
         else:
-
             time.sleep(0.1)
 
-            try_again_btn_y = (self.window_h / 2) + 30
-            try_again_btn_x = (self.window_w / 2) - 100
+            chosen_options_x, chosen_options_y = StaticData.try_again_after_fail_or_end_position
 
-            lParam = win32api.MAKELONG(int(try_again_btn_x), int(try_again_btn_y))
+            lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
             time.sleep(1)
 
-            print("[" + str(self.NosTale_name) + "] Bot failed and will try again")
+            print(Colors.FAIL + "[" + str(self.NosTale_name) + "] Bot failed and will try again" + Colors.OKGREEN)
 
             self.if_sawmill_start_exists()

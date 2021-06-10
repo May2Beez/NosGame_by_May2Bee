@@ -1,11 +1,6 @@
-import os
-import sys
 import time
 import cv2
 from threading import Thread
-
-from PIL import Image
-import numpy as np
 
 import win32api
 import win32con
@@ -14,31 +9,8 @@ import win32gui
 import vision
 import WindowCapture
 import check_score
-
-
-# Get images directory
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
-
-
-# Check if RGB value is on image (for checking if Bat is over bob)
-def detect_color(rgb, img):
-    pix = Image.fromarray(np.uint8(img)).convert('RGB')
-
-    pix = pix.load()
-
-    for y in range(0, img.shape[0]):
-        for x in range(0, img.shape[1]):
-            if pix[x, y] in rgb:
-                return True
-    return False
+from static_data import *
+from ConsoleColors import Colors
 
 
 class PondGame:
@@ -52,7 +24,6 @@ class PondGame:
         self.bat_pixel_rgb = [(33, 36, 170), (32, 35, 170), (39, 49, 210)]
         self.catch_rgb = [(255, 247, 198), ]
         self.combo_fish_rgb = [(1, 218, 255), ]
-        self.result_window_rgb = [(247, 168, 150), ]
         self.playing = False
         self.failed = False
         self.window_rect = win32gui.GetWindowRect(self.NosTale_hwnd)
@@ -92,14 +63,14 @@ class PondGame:
     def if_pond_start_exists(self):
         start = time.time()
         while not self.playing:
-            print("[" + str(self.NosTale_name) + "] Searching for start button...")
+            print(Colors.OKCYAN + "[" + str(self.NosTale_name) + "] Searching for start button...")
             img = WindowCapture.WindowCapture(window_hwnd=self.NosTale_hwnd).get_screenshot()
             self.points = self.start_pond.find(img, threshold=0.9)
             if time.time() - start > 5:
-                print("[" + str(self.NosTale_name) + "] I coudn't find start within 5 seconds")
+                print(Colors.WARNING + "[" + str(self.NosTale_name) + "] I coudn't find start within 5 seconds")
                 break
             if self.points:
-                print("[" + str(self.NosTale_name) + "] Found start button")
+                print(Colors.BOLD + Colors.OKGREEN + "[" + str(self.NosTale_name) + "] Found start button" + Colors.ENDC + Colors.OKGREEN)
                 self.playing = True
                 self.failed = False
                 self.click_pond_start()
@@ -109,7 +80,7 @@ class PondGame:
 
     # Clicks start game
     def click_pond_start(self):
-        print(
+        print(Colors.OKGREEN +
             "[" + str(self.NosTale_name) + "] Doing " + str(self.repeats_counter) + "/" + str(self.repeats) + " repeat")
         lParam = win32api.MAKELONG(self.points[0][0], self.points[0][1] + 20)
         win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
@@ -207,7 +178,7 @@ class PondGame:
                 result_window_crop_img = fail_img[int(result_window_y):int(result_window_y + 10),
                                          int(result_window_x):int(result_window_x + 10)].copy()
 
-                if detect_color(self.result_window_rgb, result_window_crop_img):
+                if detect_color(StaticData.result_window_rgb, result_window_crop_img):
                     self.failed = True
                     self.playing = False
                     break
@@ -238,77 +209,45 @@ class PondGame:
                 result_window_crop_img = fail_img[int(result_window_y):int(result_window_y + 10),
                                          int(result_window_x):int(result_window_x + 10)].copy()
 
-                if detect_color(self.result_window_rgb, result_window_crop_img):
+                if detect_color(StaticData.result_window_rgb, result_window_crop_img):
                     break
 
                 self.click(win32con.VK_LEFT, False)
 
                 time.sleep(0.5)
 
-            get_reward = vision.Vision(cv2.imread(resource_path("images/get_reward.png")))
-
-            while True:
-
-                try:
-                    img = self.NosTale_window.get_screenshot()
-                except Exception:
-                    continue
-
-                reward_points = get_reward.find(img, threshold=0.95)
-
-                if reward_points:
-                    break
-
-                time.sleep(1)
-
             # Click Reward button
-            lParam = win32api.MAKELONG(reward_points[0][0], reward_points[0][1] + 20)
+            lParam = win32api.MAKELONG(StaticData.get_reward_position[0], StaticData.get_reward_position[1])
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-            time.sleep(1.2)
+            time.sleep(1)
 
             # Click level reward
-            reward_button_y = int(img.shape[0] / 2 + 50)
-            reward_button_x = int(
-                (img.shape[1] / 2 + (int(self.reward_level) - 3) * 70) if int(self.reward_level) >= 3 else (
-                        img.shape[0] / 2 - (int(self.reward_level) - 3) * 70))
+            reward_button_x, reward_button_y = StaticData.reward_positions[int(self.reward_level)]
 
             lParam = win32api.MAKELONG(reward_button_x, reward_button_y)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-            time.sleep(1.2)
+            time.sleep(1)
 
             self.repeats_counter += 1
 
-            finish_img = self.NosTale_window.get_screenshot()
-
             if self.repeats_counter <= self.repeats:
 
-                options_to_choose = vision.Vision(cv2.imread(resource_path("images/try_again.png")))
+                chosen_options_x, chosen_options_y = StaticData.try_again_position
 
             else:
 
-                options_to_choose = vision.Vision(cv2.imread(resource_path("images/end_session.png")))
-                print("[" + str(self.NosTale_name) + "] Has finished all repeats")
+                chosen_options_x, chosen_options_y = StaticData.stop_position
+                print(Colors.UNDERLINE + Colors.OKBLUE + "[" + str(self.NosTale_name) + "] Has finished all repeats" + Colors.OKGREEN)
 
-            while True:
-
-                chosen_option_points = options_to_choose.find(finish_img, threshold=0.85)
-
-                if chosen_option_points:
-                    break
-
-                time.sleep(1)
-
-            time.sleep(0.1)
-
-            lParam = win32api.MAKELONG(chosen_option_points[0][0], chosen_option_points[0][1] + 20)
+            lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-            time.sleep(1.2)
+            time.sleep(1)
 
             end_img = self.NosTale_window.get_screenshot()
 
@@ -321,22 +260,14 @@ class PondGame:
             if vision.Vision(cv2.imread(resource_path("images/not_enough_points.png"))).find(result_window_crop_img,
                                                                                              threshold=0.9):
 
-                print("[" + str(self.NosTale_name) + "] Not enough points to play")
+                print(Colors.WARNING + "[" + str(self.NosTale_name) + "] Not enough points to play" + Colors.OKGREEN)
 
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYDOWN, win32con.VK_ESCAPE, 0x002C0001)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYUP, win32con.VK_ESCAPE, 0xC02C0001)
 
-                time.sleep(0.1)
+                chosen_options_x, chosen_options_y = StaticData.stop_position
 
-                end_img = self.NosTale_window.get_screenshot()
-
-                options_to_choose = vision.Vision(cv2.imread(resource_path("images/end_session.png")))
-
-                chosen_option_points = options_to_choose.find(end_img, threshold=0.92)
-
-                time.sleep(0.1)
-
-                lParam = win32api.MAKELONG(chosen_option_points[0][0], chosen_option_points[0][1] + 20)
+                lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
@@ -349,16 +280,15 @@ class PondGame:
         else:
             time.sleep(0.1)
 
-            try_again_btn_y = (self.window_h / 2) + 30
-            try_again_btn_x = (self.window_w / 2) - 100
+            chosen_options_x, chosen_options_y = StaticData.try_again_after_fail_or_end_position
 
-            lParam = win32api.MAKELONG(int(try_again_btn_x), int(try_again_btn_y))
+            lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
             win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
             time.sleep(1)
 
-            print("[" + str(self.NosTale_name) + "] Bot failed and will try again")
+            print(Colors.FAIL + "[" + str(self.NosTale_name) + "] Bot failed and will try again" + Colors.OKGREEN)
 
             self.if_pond_start_exists()
 
