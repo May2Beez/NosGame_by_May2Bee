@@ -113,7 +113,8 @@ def choose_window():
 
     if len(NOSTALE_WINDOWS) > 0:
 
-        print(Colors.HEADER + Colors.BOLD + "Choose NosTale client:" + Colors.ENDC + Colors.OKGREEN)
+        os.system('cls')
+        print(Colors.BOLD + Colors.HEADER + "Choose NosTale client:" + Colors.ENDC + Colors.OKGREEN)
 
         for index, key in enumerate(NOSTALE_WINDOWS):
             print(str(index + 1) + ". " + str(NOSTALE_WINDOWS[key]))
