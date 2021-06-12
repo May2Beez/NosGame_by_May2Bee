@@ -1,12 +1,7 @@
-import ctypes
 import os
 import time
 
-import psutil as psutil
-import win32api
-import win32con
 import win32gui
-import win32process
 
 import pond_game
 import sawmill_game
