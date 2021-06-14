@@ -55,6 +55,8 @@ class Sawmill:
                 self.playing = False
                 self.failed = False
 
+            time.sleep(1)
+
     def if_sawmill_start_exists(self):
         start = time.time()
         while not self.playing:
@@ -69,6 +71,7 @@ class Sawmill:
                     self.NosTale_name) + "] Found start button" + Colors.ENDC + Colors.OKGREEN)
                 self.playing = True
                 self.click_sawmill_start(points)
+                break
 
             time.sleep(1)
 
@@ -131,10 +134,12 @@ class Sawmill:
             if detect_color(self.wood_rgb, chop_place_1):
 
                 self.click(win32con.VK_LEFT)
+                time.sleep(0.3)
 
             elif detect_color(self.wood_rgb, chop_place_2):
 
                 self.click(win32con.VK_RIGHT)
+                time.sleep(0.3)
 
             # Full IMG
             try:
@@ -152,6 +157,7 @@ class Sawmill:
                 self.failed = True
                 self.playing = False
                 break
+
 
         if not self.playing:
             self.stop_game()
@@ -176,7 +182,7 @@ class Sawmill:
                 if detect_color(StaticData.result_window_rgb, result_window_crop_img):
                     break
 
-                time.sleep(0.1)
+                time.sleep(1)
 
             # Click Reward button
             lParam = win32api.MAKELONG(StaticData.get_reward_position[0], StaticData.get_reward_position[1])
