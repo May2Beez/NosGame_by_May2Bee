@@ -3,9 +3,8 @@ import cv2
 from threading import Thread
 
 import win32api
-import win32con
-import win32gui
 
+import static_data
 import vision
 import WindowCapture
 import check_score
@@ -18,7 +17,6 @@ class PondGame:
         self.NosTale_hwnd = win32gui.FindWindow('TNosTaleMainF', NosTale_name)
         self.NosTale_name = NosTale_name
         self.NosTale_window = WindowCapture.WindowCapture(window_hwnd=self.NosTale_hwnd)
-        self.start_pond = vision.Vision(cv2.imread(resource_path("images/start_pond.png")))
         self.score_checker = check_score.CheckScore(
             cv2.imread(resource_path("images/score_digits.png"), cv2.IMREAD_GRAYSCALE))
         self.bat_pixel_rgb = [(33, 36, 170), (32, 35, 170), (39, 49, 210)]
@@ -26,14 +24,17 @@ class PondGame:
         self.combo_fish_rgb = [(1, 218, 255), ]
         self.playing = False
         self.failed = False
-        self.window_rect = win32gui.GetWindowRect(self.NosTale_hwnd)
-        self.window_h = self.window_rect[3] - self.window_rect[1]
-        self.window_w = self.window_rect[2] - self.window_rect[0]
         self.reward_level = level
         self.repeats = repeats
         self.repeats_counter = 1
         self.score_levels = [0, 1000, 4000, 8000, 12000, 20000]
-        self.if_pond_start_exists()
+        self.resolution_index = get_resolution(self.NosTale_window)
+        if self.resolution_index != -1:
+            self.if_pond_start_exists()
+        else:
+            print(Colors.WARNING + "Unsupported resolution, sorry...")
+            time.sleep(2)
+            exit(1)
 
     def checking_score_thread(self):
 
@@ -62,41 +63,38 @@ class PondGame:
     # Checks if game window is opened
     def if_pond_start_exists(self):
         start = time.time()
-        while not self.playing:
+        while time.time() - start < 5:
             print(Colors.OKCYAN + "[" + str(self.NosTale_name) + "] Searching for start button...")
-            img = WindowCapture.WindowCapture(window_hwnd=self.NosTale_hwnd).get_screenshot()
-            self.points = self.start_pond.find(img, threshold=0.9)
-            if time.time() - start > 5:
-                print(Colors.WARNING + "[" + str(self.NosTale_name) + "] I coudn't find start within 5 seconds")
-                break
-            if self.points:
-                print(Colors.BOLD + Colors.OKGREEN + "[" + str(self.NosTale_name) + "] Found start button" + Colors.ENDC + Colors.OKGREEN)
+            img = self.NosTale_window.get_screenshot()
+            x, y = static_data.get_start_game_position(img)
+            img = self.NosTale_window.get_screenshot()[(y - 1):(y + 1), (x - 1):(x + 1)]
+            if static_data.detect_color(StaticData.start_game_rgb, img):
+                print(Colors.OKGREEN + "[" + str(self.NosTale_name) + "] Found start button!")
+                lParam = win32api.MAKELONG(x, y)
+                click_at(lParam, self.NosTale_hwnd)
+                time.sleep(1)
                 self.playing = True
                 self.failed = False
-                self.click_pond_start()
+                self.find_bobs()
                 break
-
             time.sleep(1)
-
-    # Clicks start game
-    def click_pond_start(self):
-        print(Colors.OKGREEN +
-            "[" + str(self.NosTale_name) + "] Doing " + str(self.repeats_counter) + "/" + str(self.repeats) + " repeat")
-        lParam = win32api.MAKELONG(self.points[0][0], self.points[0][1] + 20)
-        win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
-        win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-        win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-        time.sleep(1)
-        self.find_bobs()
 
     # Defines images to variables and starts game
     def find_bobs(self):
-        self.left_bot_bob = vision.Vision(cv2.imread(resource_path("images/bob_left_bot.png")))
-        self.right_top_bob = vision.Vision(cv2.imread(resource_path("images/bob_top_right.png")))
+        try:
+            self.left_bot_bob = vision.Vision(cv2.imread(resource_path("images/bob_left_bot.png")))
+            self.right_top_bob = vision.Vision(cv2.imread(resource_path("images/bob_top_right.png")))
 
-        if self.left_bot_bob and self.right_top_bob:
-            time.sleep(0.1)
-            self.play_game()
+            if self.left_bot_bob and self.right_top_bob:
+                print(Colors.OKGREEN +
+                      "[" + str(self.NosTale_name) + "] Doing " +
+                      str(self.repeats_counter) + "/" +
+                      str(self.repeats) +
+                      " repeat")
+                time.sleep(0.1)
+                self.play_game()
+        except:
+            self.if_pond_start_exists()
 
     # Single click of key with delay
     def click(self, key, delay=True):
@@ -215,38 +213,41 @@ class PondGame:
 
                 time.sleep(0.5)
 
+            time.sleep(0.7)
+
             # Click Reward button
-            lParam = win32api.MAKELONG(StaticData.get_reward_position[0], StaticData.get_reward_position[1])
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-            time.sleep(1)
+            img = self.NosTale_window.get_screenshot()
+            x, y = static_data.get_reward_position(img)
+            lParam = win32api.MAKELONG(x, y)
+            click_at(lParam, self.NosTale_hwnd)
+            time.sleep(0.7)
 
             # Click level reward
-            reward_button_x, reward_button_y = StaticData.reward_positions[int(self.reward_level)]
-
-            lParam = win32api.MAKELONG(reward_button_x, reward_button_y)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-            time.sleep(1)
+            img = self.NosTale_window.get_screenshot()
+            x, y = static_data.get_level_reward_position(img, self.reward_level)
+            lParam = win32api.MAKELONG(x, y)
+            click_at(lParam, self.NosTale_hwnd)
+            time.sleep(0.7)
 
             self.repeats_counter += 1
 
+            img = self.NosTale_window.get_screenshot()
+
             if self.repeats_counter <= self.repeats:
 
-                chosen_options_x, chosen_options_y = StaticData.try_again_position
+                chosen_options_x, chosen_options_y = static_data.get_play_again_position(img)
 
             else:
 
-                chosen_options_x, chosen_options_y = StaticData.stop_position
-                print(Colors.UNDERLINE + Colors.OKBLUE + "[" + str(self.NosTale_name) + "] Has finished all repeats" + Colors.OKGREEN)
+                chosen_options_x, chosen_options_y = static_data.get_stop_position(img)
+                print(Colors.UNDERLINE +
+                      Colors.OKBLUE +
+                      "[" + str(self.NosTale_name) + "] Has finished all repeats" +
+                      Colors.OKGREEN)
 
             lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
-            time.sleep(1)
+            click_at(lParam, self.NosTale_hwnd)
+            time.sleep(0.7)
 
             end_img = self.NosTale_window.get_screenshot()
 
@@ -259,17 +260,17 @@ class PondGame:
             if vision.Vision(cv2.imread(resource_path("images/not_enough_points.png"))).find(result_window_crop_img,
                                                                                              threshold=0.9):
 
+                exit(0)
+
                 print(Colors.WARNING + "[" + str(self.NosTale_name) + "] Not enough points to play" + Colors.OKGREEN)
 
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYDOWN, win32con.VK_ESCAPE, 0x002C0001)
                 win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_KEYUP, win32con.VK_ESCAPE, 0xC02C0001)
 
-                chosen_options_x, chosen_options_y = StaticData.stop_position
+                chosen_options_x, chosen_options_y = static_data.get_stop_position(img)
 
                 lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
-                win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
-                win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-                win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
+                click_at(lParam, self.NosTale_hwnd)
                 time.sleep(1)
 
             elif self.repeats_counter <= self.repeats:
@@ -279,12 +280,11 @@ class PondGame:
         else:
             time.sleep(0.1)
 
-            chosen_options_x, chosen_options_y = StaticData.try_again_after_fail_or_end_position
+            img = self.NosTale_window.get_screenshot()
+            chosen_options_x, chosen_options_y = static_data.get_play_again_after_fail_position(img)
 
             lParam = win32api.MAKELONG(chosen_options_x, chosen_options_y)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_MOUSEMOVE, None, lParam)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-            win32gui.SendMessage(self.NosTale_hwnd, win32con.WM_LBUTTONUP, None, lParam)
+            click_at(lParam, self.NosTale_hwnd)
             time.sleep(1)
 
             print(Colors.FAIL + "[" + str(self.NosTale_name) + "] Bot failed and will try again" + Colors.OKGREEN)

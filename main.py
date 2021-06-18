@@ -5,6 +5,7 @@ import win32gui
 
 import pond_game
 import sawmill_game
+import static_data
 from ConsoleColors import *
 
 
