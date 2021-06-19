@@ -293,10 +293,10 @@ class PondGame:
 
     # Solving combo fish
     def solve_combo_fish(self):
-        arrow_left = vision.Vision(cv2.imread(resource_path("images/arrow_left.bmp")))
-        arrow_up = vision.Vision(cv2.imread(resource_path("images/arrow_up.bmp")))
-        arrow_right = vision.Vision(cv2.imread(resource_path("images/arrow_right.bmp")))
-        arrow_down = vision.Vision(cv2.imread(resource_path("images/arrow_down.bmp")))
+        arrow_left = vision.Vision(cv2.imread(resource_path("images/arrow_left.jpg")))
+        arrow_up = vision.Vision(cv2.imread(resource_path("images/arrow_up.jpg")))
+        arrow_right = vision.Vision(cv2.imread(resource_path("images/arrow_right.jpg")))
+        arrow_down = vision.Vision(cv2.imread(resource_path("images/arrow_down.jpg")))
 
         combo = 0
 
@@ -308,23 +308,23 @@ class PondGame:
             except Exception:
                 continue
 
-            x = img.shape[1] / 2 - 500 / 2
-            y = img.shape[0] / 2 - 420 / 2
-            crop_img = img[int(y):int(y + 420), int(x):int(x + 500)].copy()
+            x = img.shape[1] / 2
+            y = img.shape[0] / 2
+            crop_img = img[int(y - 10):int(y + 25), int(x - 160):int(x + 230)].copy()
 
-            if arrow_left.find(crop_img, threshold=0.98):
+            if arrow_left.find(crop_img, threshold=0.95):
                 self.click(win32con.VK_LEFT, False)
                 combo += 1
 
-            if arrow_up.find(crop_img, threshold=0.98):
+            elif arrow_up.find(crop_img, threshold=0.95):
                 self.click(win32con.VK_UP, False)
                 combo += 1
 
-            if arrow_right.find(crop_img, threshold=0.98):
+            elif arrow_right.find(crop_img, threshold=0.95):
                 self.click(win32con.VK_RIGHT, False)
                 combo += 1
 
-            if arrow_down.find(crop_img, threshold=0.98):
+            elif arrow_down.find(crop_img, threshold=0.95):
                 self.click(win32con.VK_DOWN, False)
                 combo += 1
 
